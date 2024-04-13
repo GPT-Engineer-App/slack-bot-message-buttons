@@ -1,0 +1,94 @@
+import os
+from slack_bolt import App
+from slack_bolt.adapter.socket_mode import SocketModeHandler
+
+app = App(token=os.environ["SLACK_BOT_TOKEN"])
+
+@app.command("/create_project")
+def create_project(ack, respond):
+    ack()
+    respond({
+        "text": "Click the button to create a new project:",
+        "attachments": [
+            {
+                "fallback": "Create Project",
+                "actions": [
+                    {
+                        "type": "button",
+                        "text": "Create Project",
+                        "style": "primary",
+                        "action_id": "create_project_button"
+                    }
+                ]
+            }
+        ]
+    })
+
+@app.action("create_project_button")
+def open_modal(ack, body, client):
+    ack()
+    client.views_open(
+        trigger_id=body["trigger_id"],
+        view={
+            "type": "modal",
+            "callback_id": "project_modal",
+            "title": {
+                "type": "plain_text",
+                "text": "Create Project"
+            },
+            "submit": {
+                "type": "plain_text",
+                "text": "Submit"
+            },
+            "blocks": [
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": "*Create a New Project*"
+                    }
+                },
+                {
+                    "type": "divider"
+                },
+                {
+                    "type": "input",
+                    "block_id": "title_input",
+                    "element": {
+                        "type": "plain_text_input",
+                        "action_id": "title"
+                    },
+                    "label": {
+                        "type": "plain_text",
+                        "text": "Project Title"
+                    }
+                },
+                {
+                    "type": "input",
+                    "block_id": "notes_input",
+                    "element": {
+                        "type": "plain_text_input",
+                        "multiline": True,
+                        "action_id": "notes"
+                    },
+                    "label": {
+                        "type": "plain_text",
+                        "text": "Notes"
+                    }
+                }
+            ]
+        }
+    )
+
+@app.view("project_modal")
+def handle_submission(ack, body, view):
+    ack()
+    user = body["user"]["name"]
+    title = view["state"]["values"]["title_input"]["title"]["value"]
+    notes = view["state"]["values"]["notes_input"]["notes"]["value"]
+    print(f"User: {user}")
+    print(f"Project Title: {title}")
+    print(f"Notes: {notes}")
+
+if __name__ == "__main__":
+    SocketModeHandler(app, os.environ["SLACK_APP_TOKEN"]).start()
